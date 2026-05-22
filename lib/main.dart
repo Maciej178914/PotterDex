@@ -1,5 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:hive_ce/hive.dart';
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -146,7 +149,7 @@ class Record {
 class RecordCard extends StatelessWidget{
   final Record record;
 
-  RecordCard({super.key, required this.record});
+  const RecordCard({super.key, required this.record});
 
   @override
   Widget build(BuildContext context) {
@@ -159,32 +162,31 @@ class RecordCard extends StatelessWidget{
   }
 }
 
-List<Record> listOfRecords = [
-  Record("", id: "1", name: "Test1", description: "aaaa"),
-  Record("", id: "2", name: "Test2", description: "bbbb"),
-  Record("", id: "3", name: "Test3", description: "cccc"),
-];
-
 class SelectedListScreen extends StatefulWidget {
   final name;
   
   const SelectedListScreen({super.key, required this.name});
   
   @override
-  State<SelectedListScreen> createState() => _SelectedListScreenState(name: name);
+  State<SelectedListScreen> createState() => _SelectedListScreenState(nameOfPage: name);
 }
 
 class _SelectedListScreenState extends State<SelectedListScreen> {
-  final name;
+  final nameOfPage;
   bool isAddButtonVisable = false;
+  late Future<List<Record>> recordsFuture;
   
-  _SelectedListScreenState({required this.name});
+  _SelectedListScreenState({required this.nameOfPage});
 
   @override
   void initState() {
     super.initState();
-    if(name != "Ulubione") {
+
+    if(nameOfPage != "Ulubione") {
       isAddButtonVisable = true;
+      recordsFuture = ApiService.fetchTasks(nameOfPage);
+    } else {
+      recordsFuture = Future.value([]);
     }
   }
 
@@ -192,17 +194,36 @@ class _SelectedListScreenState extends State<SelectedListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("PotterDex - $name"),
+        title: Text("$nameOfPage"),
       ),
       body: Center(
         child: Column(
           children: [
             Expanded(
-              child: ListView.builder(
-                itemCount: listOfRecords.length,
-                itemBuilder: (context, index) {
-                  return RecordCard(
-                      record: listOfRecords[index]
+              child: FutureBuilder<List<Record>>(
+                future: recordsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text("Błąd: ${snapshot.error}"),
+                    );
+                  }
+
+                  final listOfRecords = snapshot.data ?? [];
+
+                  return ListView.builder(
+                    itemCount: listOfRecords.length,
+                    itemBuilder: (context, index) {
+                      return RecordCard(
+                          record: listOfRecords[index]
+                      );
+                    }
                   );
                 }
               )
@@ -210,20 +231,33 @@ class _SelectedListScreenState extends State<SelectedListScreen> {
           ],
         ),
       ),
-      floatingActionButton: isAddButtonVisable ? FloatingActionButton(
-        onPressed: () async {
-          final Record? newRecord = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddRecordScreen()),
-          );
+      floatingActionButton: isAddButtonVisable ? SizedBox(
+        height: 84,
+        width: 84,
+        child: FloatingActionButton(
+          onPressed: () async {
+            final Record? newRecord = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddRecordScreen()),
+            );
 
-          if(newRecord != null) {
-            setState(() {
-              listOfRecords.add(newRecord);
-            });
-          }
-        },
-        child: Icon(Icons.add),
+            if(newRecord != null) {
+              setState(() {
+                // recordsFuture.add(newRecord);
+              });
+            }
+          },
+          backgroundColor: Color(0xFFD4AF37),
+          foregroundColor: Color(0xFF12141C),
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24)
+          ),
+          child: Icon(
+            Icons.add,
+            size: 36,
+          ),
+        )
       ) : null
     );
   }
@@ -239,7 +273,7 @@ class AddRecordScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("PotterDex - Nowy Element"),
+        title: Text("Nowy Element"),
       ),
       body: Padding(
         padding: EdgeInsets.all(16),
@@ -274,5 +308,33 @@ class AddRecordScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class ApiService {
+  static const Map<String, dynamic> baseUrl = {
+    "Postacie": "https://hp-api.onrender.com/api/characters",
+    "Zaklęcia": "https://hp-api.onrender.com/api/spells",
+    "Studenci": "https://hp-api.onrender.com/api/characters/students",
+    "Personel": "https://hp-api.onrender.com/api/characters/staff"
+  };
+
+  static Future<List<Record>> fetchTasks(String pageTypeName) async {
+    final response = await http.get(Uri.parse("${baseUrl[pageTypeName]}"));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+
+      return data.map((record) {
+        return Record(
+          record["image"] ?? "",
+          id: record["id"],
+          name: record["name"],
+          description: record["description"] ?? record["actor"]
+        );
+      }).toList();
+    } else {
+      throw Exception("Błąd pobierania danych");
+    }
   }
 }
