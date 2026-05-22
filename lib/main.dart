@@ -379,7 +379,7 @@ class AddRecordScreen extends StatelessWidget {
 }
 
 class DetailedRecordScreen extends StatefulWidget {
-  final Record record;
+  Record record;
   final String nameOfPage;
 
   DetailedRecordScreen({super.key, required this.record, required this.nameOfPage});
@@ -418,7 +418,7 @@ class _DetailedRecordScreenState extends State<DetailedRecordScreen> {
               }
 
               setState(() {
-                LocalDatabase.updateRecord(widget.nameOfPage, widget.record);
+                updateRecord(widget.nameOfPage, widget.record);
               });
             },
           ),
@@ -494,7 +494,58 @@ class _DetailedRecordScreenState extends State<DetailedRecordScreen> {
                 _buildInfoRow("Długość", widget.record.wand["length"] != null ? "${widget.record.wand["length"]} cali" : "Nieznana"),
               ],
             ),
-            SizedBox(height: 50)
+
+            SizedBox(height: 20),
+
+            Wrap( children: [
+              ElevatedButton(
+                onPressed: () {
+                  deleteRecord(widget.nameOfPage, widget.record);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(150, 50),
+                  textStyle: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                child: Text("Usuń"),
+              ),
+
+              SizedBox(width: 40),
+
+              ElevatedButton(
+                onPressed: () async {
+                  final Record? updatedRecord = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => EditRecordDetails(recordToEdit: widget.record)
+                      )
+                  );
+
+                  if(updatedRecord != null) {
+                    setState(() {
+                      updateRecord(widget.nameOfPage, updatedRecord);
+                      widget.record = updatedRecord;
+                    });
+                  }
+                },
+
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFD4AF37),
+                  foregroundColor: Color(0xFF12141C),
+                  minimumSize: Size(150, 50),
+                  textStyle: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                child: Text("Edytuj"),
+              ),
+            ],),
+
+            SizedBox(height: 60)
           ],
         ),
       ),
@@ -601,6 +652,260 @@ class _DetailedRecordScreenState extends State<DetailedRecordScreen> {
       case 'hufflepuff': return Colors.amber;
       default: return Color(0xFFD4AF37);
     }
+  }
+}
+
+class EditRecordDetails extends StatelessWidget {
+  final Record recordToEdit;
+
+  EditRecordDetails({super.key, required this.recordToEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    TextEditingController nameController = TextEditingController(text: recordToEdit.name);
+    TextEditingController imageController = TextEditingController(text: recordToEdit.image);
+    TextEditingController houseController = TextEditingController(text: recordToEdit.house);
+    TextEditingController dateOfBirthController = TextEditingController(text: recordToEdit.dateOfBirth);
+    TextEditingController ancestryController = TextEditingController(text: recordToEdit.ancestry);
+    TextEditingController actorController = TextEditingController(text: recordToEdit.actor);
+    TextEditingController patronusController = TextEditingController(text: recordToEdit.patronus);
+    TextEditingController woodController = TextEditingController(text: recordToEdit.wand["wood"]);
+    TextEditingController coreController = TextEditingController(text: recordToEdit.wand["core"]);
+    TextEditingController lengthController = TextEditingController(text: recordToEdit.wand["length"].toString());
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Edytuj Element"),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Color(0xFF232634),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Color(0xFFD4AF37), width: 1),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: imageController.text.isNotEmpty ? Image.network(
+                      imageController.text,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => Icon(
+                          Icons.image_not_supported,
+                          color: Colors.white24
+                      )
+                  ) : Icon(Icons.image, color: Colors.white24),
+                ),
+              ),
+            ),
+
+            SizedBox(height: 30),
+
+            _buildTextField(
+              controller: nameController,
+              label: "Nazwa",
+              icon: Icons.badge_outlined,
+            ),
+            SizedBox(height: 20),
+
+            _buildTextField(
+              controller: imageController,
+              label: "URL Zdjęcia",
+              icon: Icons.link,
+            ),
+            SizedBox(height: 30),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Informacje podstawowe",
+                  style: TextStyle(
+                    color: Color(0xFFEFEFEF),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 6),
+            Divider(
+              color: Colors.white12,
+              thickness: 1,
+            ),
+            SizedBox(height: 10),
+
+            _buildTextField(
+              controller: houseController,
+              label: "Dom",
+              icon: Icons.home,
+            ),
+            SizedBox(height: 20),
+
+            _buildTextField(
+              controller: dateOfBirthController,
+              label: "Data urodzenia",
+              icon: Icons.cake,
+            ),
+            SizedBox(height: 20),
+
+            _buildTextField(
+              controller: ancestryController,
+              label: "Pochodzenie",
+              icon: Icons.family_restroom,
+            ),
+            SizedBox(height: 20),
+
+            _buildTextField(
+              controller: actorController,
+              label: "Aktor",
+              icon: Icons.recent_actors,
+            ),
+            SizedBox(height: 30),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Zdolności magiczne",
+                  style: TextStyle(
+                    color: Color(0xFFEFEFEF),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 6),
+            Divider(
+              color: Colors.white12,
+              thickness: 1,
+            ),
+            SizedBox(height: 10),
+
+            _buildTextField(
+              controller: patronusController,
+              label: "Patronus",
+              icon: Icons.shield,
+            ),
+            SizedBox(height: 30),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Różdżka",
+                  style: TextStyle(
+                    color: Color(0xFFEFEFEF),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ],
+            ),
+
+            Divider(
+              color: Colors.white12,
+              thickness: 1,
+            ),
+            SizedBox(height: 10),
+
+            _buildTextField(
+              controller: woodController,
+              label: "Drewno",
+              icon: Icons.forest,
+            ),
+            SizedBox(height: 20),
+
+            _buildTextField(
+              controller: coreController,
+              label: "Rdzeń",
+              icon: Icons.align_horizontal_center,
+            ),
+            SizedBox(height: 20),
+
+            _buildTextField(
+              controller: lengthController,
+              label: "Długość",
+              icon: Icons.straighten,
+            ),
+
+            SizedBox(height: 40),
+
+            ElevatedButton(
+              onPressed: () {
+                final updatedRecord = Record(
+                    id: recordToEdit.id,
+                    id_json: recordToEdit.id_json,
+                    name: nameController.text,
+                    description: actorController.text,
+                    isDetailed: recordToEdit.isDetailed,
+                    isFavorite: recordToEdit.isFavorite,
+                    image: imageController.text,
+                    house: houseController.text,
+                    dateOfBirth: dateOfBirthController.text,
+                    ancestry: ancestryController.text,
+                    patronus: patronusController.text,
+                    actor: actorController.text,
+                    wand: {
+                      "wood": woodController.text,
+                      "core": coreController.text,
+                      "length": lengthController.text
+                    }
+                );
+
+                Navigator.pop(context, updatedRecord);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFD4AF37),
+                foregroundColor: Color(0xFF12141C),
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(
+                "ZAPISZ ZMIANY",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            SizedBox(height: 60),
+          ],
+        ),
+      )
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextField(
+      controller: controller,
+      style: TextStyle(color: Color(0xFFEFEFEF)),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Color(0xFFD4AF37)),
+        filled: true,
+        fillColor: Color(0xFF232634),
+        prefixIcon: Icon(icon, color: Color(0xFFD4AF37)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Color(0xFFD4AF37), width: 2),
+        ),
+      ),
+    );
   }
 }
 
@@ -874,4 +1179,9 @@ Future<void> addRecord(String nameOfPage, Record record) async {
 Future<void> deleteRecord(String nameOfPage, Record record) async {
   await LocalDatabase.deleteRecord(nameOfPage, record.id);
   await loadRecords(nameOfPage);
+}
+
+Future<void> updateRecord(String nameOfPage, Record record) async {
+await LocalDatabase.updateRecord(nameOfPage, record);
+await loadRecords(nameOfPage);
 }
