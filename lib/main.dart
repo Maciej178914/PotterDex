@@ -118,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => SelectedListScreen(name: category["title"])
+                  builder: (context) => SelectedListScreen(nameOfPage: category["title"])
               )
           );
         },
@@ -149,35 +149,31 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class SelectedListScreen extends StatefulWidget {
-  final name;
+  final nameOfPage;
   
-  const SelectedListScreen({super.key, required this.name});
+  const SelectedListScreen({super.key, required this.nameOfPage});
   
   @override
-  State<SelectedListScreen> createState() => _SelectedListScreenState(nameOfPage: name);
+  State<SelectedListScreen> createState() => _SelectedListScreenState();
 }
 
 class _SelectedListScreenState extends State<SelectedListScreen> {
-  final String nameOfPage;
   bool isAddButtonVisable = false;
   late Future<List<Record>> recordsFuture;
   late String showPageName;
-  
-  _SelectedListScreenState({required this.nameOfPage});
 
   @override
   void initState() {
     super.initState();
-    showPageName = nameOfPage;
+    showPageName = widget.nameOfPage;
 
-    if(nameOfPage != "Ulubione") {
+    if(widget.nameOfPage != "Ulubione") {
       isAddButtonVisable = true;
-      recordsFuture = loadRecords(nameOfPage);
-    } else {
-      recordsFuture = Future.value([]);
     }
 
-    if(nameOfPage == "Zaklecia") {
+    recordsFuture = loadRecords(widget.nameOfPage);
+
+    if(widget.nameOfPage == "Zaklecia") {
       showPageName = "Zaklęcia";
     }
   }
@@ -213,7 +209,19 @@ class _SelectedListScreenState extends State<SelectedListScreen> {
                     itemCount: listOfRecords.length,
                     itemBuilder: (context, index) {
                       return RecordCard(
-                          record: listOfRecords[index]
+                        record: listOfRecords[index],
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => DetailedRecordScreen(record: listOfRecords[index], nameOfPage: widget.nameOfPage)
+                            )
+                          );
+
+                          setState(() {
+                            recordsFuture = loadRecords(widget.nameOfPage);
+                          });
+                        },
                       );
                     }
                   );
@@ -230,13 +238,13 @@ class _SelectedListScreenState extends State<SelectedListScreen> {
           onPressed: () async {
             final Record? newRecord = await Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AddRecordScreen(nameOfPage: nameOfPage)),
+              MaterialPageRoute(builder: (context) => AddRecordScreen(nameOfPage: widget.nameOfPage)),
             );
 
             if(newRecord != null) {
               setState(() {
-                addRecord(nameOfPage, newRecord);
-                recordsFuture = loadRecords(nameOfPage);
+                addRecord(widget.nameOfPage, newRecord);
+                recordsFuture = loadRecords(widget.nameOfPage);
               });
             }
           },
@@ -264,6 +272,14 @@ class AddRecordScreen extends StatelessWidget {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
+  bool isNameDetailed() {
+    if(nameOfPage == "Zaklecia") {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -271,7 +287,7 @@ class AddRecordScreen extends StatelessWidget {
         title: Text("Nowy Element"),
       ),
       body: Padding(
-        padding: EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(24),
         child: Column(
           children: [
             TextField(
@@ -281,15 +297,15 @@ class AddRecordScreen extends StatelessWidget {
                 labelText: "Nazwa",
                 labelStyle: TextStyle(color: Color(0xFFD4AF37)),
                 filled: true,
-                fillColor: const Color(0xFF232634),
-                prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFFD4AF37)),
+                fillColor: Color(0xFF232634),
+                prefixIcon: Icon(Icons.badge_outlined, color: Color(0xFFD4AF37)),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                  borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 2.0),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Color(0xFFD4AF37), width: 2),
                 ),
               ),
             ),
@@ -304,15 +320,15 @@ class AddRecordScreen extends StatelessWidget {
                 labelText: "Opis",
                 labelStyle: TextStyle(color: Color(0xFFD4AF37)),
                 filled: true,
-                fillColor: const Color(0xFF232634),
-                prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFFD4AF37)),
+                fillColor: Color(0xFF232634),
+                prefixIcon: Icon(Icons.badge_outlined, color: Color(0xFFD4AF37)),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                  borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 2.0),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Color(0xFFD4AF37), width: 2),
                 ),
               ),
             ),
@@ -321,20 +337,28 @@ class AddRecordScreen extends StatelessWidget {
 
             ElevatedButton(onPressed: () {
               final newRecord = Record(
-                "",
                 id: generateRecordId(nameOfPage),
                 id_json: "",
                 name: nameController.text,
-                description: descriptionController.text
+                description: descriptionController.text,
+                isDetailed: isNameDetailed(),
+                image: "",
+                house: "",
+                dateOfBirth: "",
+                ancestry: "",
+                patronus: "",
+                actor: "",
+                isFavorite: false,
+                wand: {}
               );
               Navigator.pop(context, newRecord);
             },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD4AF37),
-                foregroundColor: const Color(0xFF12141C),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Color(0xFFD4AF37),
+                foregroundColor: Color(0xFF12141C),
+                padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 4,
               ),
@@ -354,6 +378,232 @@ class AddRecordScreen extends StatelessWidget {
   }
 }
 
+class DetailedRecordScreen extends StatefulWidget {
+  final Record record;
+  final String nameOfPage;
+
+  DetailedRecordScreen({super.key, required this.record, required this.nameOfPage});
+
+  @override
+  State<DetailedRecordScreen> createState() => _DetailedRecordScreenState();
+}
+
+class _DetailedRecordScreenState extends State<DetailedRecordScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.record.name),
+        
+        actions: [
+          IconButton(
+            icon: Icon(
+              widget.record.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+              color: widget.record.isFavorite ? Color(0xFFD4AF37) : Colors.white54,
+              size: 32,
+            ),
+            onPressed: () {
+              if(widget.record.isFavorite) {
+                widget.record.isFavorite = false;
+                deleteRecord("Ulubione", widget.record);
+              } else {
+                widget.record.isFavorite = true;
+                addRecord("Ulubione", widget.record);
+              }
+
+              setState(() {
+                LocalDatabase.updateRecord(widget.nameOfPage, widget.record);
+              });
+            },
+          ),
+          SizedBox(width: 10)
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildHeaderImage(),
+            SizedBox(height: 24),
+
+            Text(
+              widget.record.name,
+              style: TextStyle(
+                color: Color(0xFFD4AF37),
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+                fontFamily: "serif",
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+
+            if (widget.record.house.isNotEmpty)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getHouseColor(widget.record.house),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _getHouseColor(widget.record.house)),
+                ),
+                child: Text(
+                  widget.record.house.toUpperCase(),
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+
+            SizedBox(height: 32),
+
+            _buildSectionCard(
+              title: "Informacje podstawowe",
+              icon: Icons.person_outline,
+              content: [
+                _buildInfoRow("Data urodzenia", widget.record.dateOfBirth),
+                _buildInfoRow("Pochodzenie", widget.record.ancestry),
+                _buildInfoRow("Aktor", widget.record.actor),
+              ],
+            ),
+
+            SizedBox(height: 16),
+
+            _buildSectionCard(
+              title: "Zdolności magiczne",
+              icon: Icons.auto_fix_high,
+              content: [
+                _buildInfoRow("Patronus", widget.record.patronus.isEmpty ? "Brak" : widget.record.patronus),
+                Divider(color: Colors.white24, height: 24),
+                Text(
+                  "Różdżka",
+                  style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                _buildInfoRow("Drewno", widget.record.wand["wood"]?.toString() ?? "Nieznane"),
+                _buildInfoRow("Rdzeń", widget.record.wand["core"]?.toString() ?? "Nieznany"),
+                _buildInfoRow("Długość", widget.record.wand["length"] != null ? "${widget.record.wand["length"]} cali" : "Nieznana"),
+              ],
+            ),
+            SizedBox(height: 50)
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderImage() {
+    return Container(
+      width: 180,
+      height: 240,
+      decoration: BoxDecoration(
+        color: Color(0xFF232634),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Color(0xFFD4AF37), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFFD4AF37),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: widget.record.image.isNotEmpty ? Image.network(
+          widget.record.image,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+        ) : _buildPlaceholder(),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Center(
+      child: Icon(Icons.auto_awesome, color: Color(0xFFD4AF37), size: 64),
+    );
+  }
+
+  Widget _buildSectionCard({required String title, required IconData icon, required List<Widget> content}) {
+    return Card(
+      color: Color(0xFF232634),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Color(0xFFD4AF37)),
+                SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Color(0xFFEFEFEF),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            ...content,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    if (value.isEmpty) value = "Brak danych";
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(color: Color(0xFFEFEFEF), fontSize: 15),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: TextStyle(color: Color(0xFFEFEFEF), fontSize: 15, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getHouseColor(String house) {
+    switch (house.toLowerCase()) {
+      case 'gryffindor': return Colors.redAccent;
+      case 'slytherin': return Colors.green;
+      case 'ravenclaw': return Colors.blueAccent;
+      case 'hufflepuff': return Colors.amber;
+      default: return Color(0xFFD4AF37);
+    }
+  }
+}
+
 Map<String, int> recordsLength = {
   "Postacie": 0,
   "Zaklecia": 0,
@@ -367,10 +617,26 @@ int generateRecordId(String nameOfPage) {
 }
 
 class Record {
-  final String id_json, name, description, image;
+  final String id_json, name, description, image, house, dateOfBirth, ancestry, patronus, actor;
+  final Map<String, dynamic> wand;
+  bool isDetailed, isFavorite;
   final int id;
 
-  Record(this.image, {required this.id, required this.id_json, required this.name, required this.description});
+  Record({
+    required this.id,
+    required this.id_json,
+    required this.name,
+    required this.description,
+    required this.isDetailed,
+    required this.isFavorite,
+    required this.image,
+    required this.house,
+    required this.dateOfBirth,
+    required this.ancestry,
+    required this.patronus,
+    required this.actor,
+    required this.wand
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -378,32 +644,127 @@ class Record {
       "id_json": id_json,
       "name": name,
       "description": description,
-      "image": image
+      "image": image,
+      "isDetailed": isDetailed,
+      "house": house,
+      "dateOfBirth": dateOfBirth,
+      "ancestry": ancestry,
+      "patronus": patronus,
+      "actor": actor,
+      "isFavorite": isFavorite,
+      "wand": wand
     };
   }
 
   factory Record.fromMap(Map map) {
     return Record(
-        map["image"],
-        id: map["id"],
-        id_json: map["id_json"],
-        name: map["name"],
-        description: map["description"]
+      id: map["id"],
+      id_json: map["id_json"],
+      name: map["name"],
+      description: map["description"],
+      isDetailed: map["isDetailed"],
+      image: map["image"],
+      house: map["house"],
+      dateOfBirth: map["dateOfBirth"],
+      ancestry: map["ancestry"],
+      patronus: map["patronus"],
+      actor: map["actor"],
+      isFavorite: map["isFavorite"],
+      wand: map["wand"]
     );
   }
 }
 
 class RecordCard extends StatelessWidget{
   final Record record;
+  final VoidCallback onTap;
 
-  const RecordCard({super.key, required this.record});
+  const RecordCard({super.key, required this.record, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Color(0xFF232634),
+      elevation: 4,
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.0),
+      ),
       child: ListTile(
-        title: Text(record.name),
-        subtitle: Text(record.description),
+        contentPadding: EdgeInsets.all(12),
+
+        leading: _buildAvatar(),
+
+        title: Text(
+          record.name,
+          style: TextStyle(
+            color: Color(0xFFEFEFEF),
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            letterSpacing: 0.5,
+          ),
+        ),
+
+        subtitle: Padding(
+          padding: EdgeInsets.only(top: 4),
+          child: Text(
+            record.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Color(0xFFEFEFEF),
+              fontSize: 14,
+            ),
+          ),
+        ),
+
+        trailing: record.isDetailed ? Icon(
+          Icons.chevron_right_rounded,
+          color: Color(0xFFD4AF37),
+          size: 32,
+        ) : null,
+
+        onTap: record.isDetailed ? onTap : null,
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    if(record.image.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          record.image,
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+
+          errorBuilder: (context, error, stackTrace) {
+            return _buildPlaceholder();
+          },
+        ),
+      );
+    } else {
+      return _buildPlaceholder();
+    }
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Color(0xFF12141C),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Color(0xFFD4AF37),
+          width: 1.5,
+        ),
+      ),
+      child: Icon(
+        Icons.auto_awesome,
+        color: Color(0xFFD4AF37),
+        size: 28,
       ),
     );
   }
@@ -422,14 +783,29 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
+      bool isNameDetailed;
 
       return data.map((record) {
+        if(nameOfPage == "Zaklecia") {
+          isNameDetailed = false;
+        } else {
+          isNameDetailed = true;
+        }
+
         return Record(
-          record["image"] ?? "",
+          image: record["image"] ?? "",
           id: generateRecordId(nameOfPage),
           id_json: record["id"],
           name: record["name"],
-          description: record["description"] ?? record["actor"]
+          description: record["description"] ?? record["actor"],
+          isDetailed: isNameDetailed,
+          house: record["house"] ?? "Brak",
+          dateOfBirth: record["dateOfBirth"] ?? "Nieznana",
+          ancestry: record["ancestry"] ?? "Nieznane",
+          patronus: record["patronus"] ?? "Brak",
+          actor: record["actor"] ?? "Nieznany",
+          isFavorite: false,
+          wand: record["wand"] ?? {}
         );
       }).toList();
     } else {
@@ -476,7 +852,7 @@ class LocalDatabase {
 
 class SyncService {
   static Future<void> loadInitialDataIfNeeded(String nameOfPage) async {
-    if(!LocalDatabase.isEmpty(nameOfPage)) {
+    if(!LocalDatabase.isEmpty(nameOfPage) || nameOfPage == "Ulubione") {
       return;
     }
 
@@ -492,5 +868,10 @@ Future<List<Record>> loadRecords(String nameOfPage) async {
 
 Future<void> addRecord(String nameOfPage, Record record) async {
   await LocalDatabase.addRecord(nameOfPage, record);
+  await loadRecords(nameOfPage);
+}
+
+Future<void> deleteRecord(String nameOfPage, Record record) async {
+  await LocalDatabase.deleteRecord(nameOfPage, record.id);
   await loadRecords(nameOfPage);
 }
